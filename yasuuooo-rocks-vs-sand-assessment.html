@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocks vs. Sand Diagnostic</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --navy: #1a365d;
+            --white: #ffffff;
+            --orange: #f0ad4e;
+            --red: #d9534f;
+            --light-gray: #f8f9fa;
+            --gray: #6c757d;
+            --green: #5cb85c;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--light-gray);
+            color: #212529;
+            margin: 0;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--white);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        header {
+            background-color: var(--navy);
+            color: var(--white);
+            padding: 1.5rem;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+        header h1 { margin: 0; font-size: 2rem; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .progress-bar {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+        }
+        .progress-bar-fill {
+            height: 10px;
+            width: 0%;
+            background-color: var(--navy);
+            border-radius: 5px;
+            transition: width 0.3s ease-in-out;
+        }
+        .question-group { margin-bottom: 1.5rem; }
+        .question-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        .answers { display: flex; justify-content: space-around; gap: 1rem; }
+        .answers input[type="radio"] { display: none; }
+        .answers label {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .answers input[type="radio"]:checked + label {
+            background-color: var(--navy);
+            color: var(--white);
+            border-color: var(--navy);
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        button {
+            background-color: var(--navy);
+            color: var(--white);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #11233e; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #prevBtn { background-color: var(--gray); }
+        #prevBtn:hover { background-color: #5a6268; }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+        .grade-display {
+            text-align: center;
+        }
+        .grade-letter {
+            font-size: 6rem;
+            font-weight: 700;
+            line-height: 1;
+            margin: 0;
+        }
+        .grade-score { font-size: 1.5rem; color: var(--gray); }
+        .grade-interpretation {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        .print-btn {
+            position: absolute;
+            top: 3rem;
+            right: 3rem;
+            border: 1px solid var(--gray);
+            background: none;
+            color: var(--gray);
+        }
+        @media print {
+            body { padding: 0; }
+            .container { box-shadow: none; }
+            .print-btn, .navigation-buttons, header, .progress-bar { display: none; }
+            .wizard-step { display: none !important; }
+            #resultsStep { display: block !important; }
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .container { padding: 1rem; }
+            .results-grid { grid-template-columns: 1fr; }
+            .print-btn { position: static; float: right; margin-bottom: 1rem; }
+            .answers { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+        <header>
+            <h1>Rocks vs. Sand Diagnostic</h1>
+        </header>
+
+        <div id="assessmentWizard">
+            <div class="progress-bar">
+                <div class="progress-bar-fill"></div>
+            </div>
+
+            <!-- Step 1: Operations -->
+            <div class="wizard-step active" data-step="1" data-category="Operations">
+                <h2>Category 1: Operations</h2>
+                <div class="question-group">
+                    <label>How are your daily tasks managed?</label>
+                    <div class="answers">
+                        <input type="radio" id="q1a1" name="q1" value="0"><label for="q1a1">Putting out fires</label>
+                        <input type="radio" id="q1a2" name="q1" value="5"><label for="q1a2">Following a loose plan</label>
+                        <input type="radio" id="q1a3" name="q1" value="10"><label for="q1a3">Executing a system</label>
+                    </div>
+                </div>
+                <div class="question-group">
+                    <label>When a problem occurs, how is it handled?</label>
+                    <div class="answers">
+                        <input type="radio" id="q2a1" name="q2" value="0"><label for="q2a1">Panic & scramble</label>
+                        <input type="radio" id="q2a2" name="q2" value="5"><label for="q2a2">Ad-hoc fix</label>
+                        <input type="radio" id="q2a3" name="q2" value="10"><label for="q2a3">Documented process</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Sales & Marketing -->
+            <div class="wizard-step" data-step="2" data-category="Sales & Marketing">
+                <h2>Category 2: Sales & Marketing</h2>
+                <div class="question-group">
+                    <label>Where do new leads come from?</label>
+                    <div class="answers">
+                        <input type="radio" id="q3a1" name="q3" value="0"><label for="q3a1">Random luck</label>
+                        <input type="radio" id="q3a2" name="q3" value="5"><label for="q3a2">Inconsistent efforts</label>
+                        <input type="radio" id="q3a3" name="q3" value="10"><label for="q3a3">Predictable system</label>
+                    </div>
+                </div>
+                <div class="question-group">
+                    <label>How do you follow up with prospects?</label>
+                    <div class="answers">
+                        <input type="radio" id="q4a1" name="q4" value="0"><label for="q4a1">When I remember</label>
+                        <input type="radio" id="q4a2" name="q4" value="5"><label for="q4a2">Manually, but consistently</label>
+                        <input type="radio" id="q4a3" name="q4" value="10"><label for="q4a3">Automated sequence</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Team Management -->
+            <div class="wizard-step" data-step="3" data-category="Team Management">
+                 <h2>Category 3: Team Management</h2>
+                <div class="question-group">
+                    <label>How clear are team roles and responsibilities?</label>
+                    <div class="answers">
+                        <input type="radio" id="q5a1" name="q5" value="0"><label for="q5a1">We all just pitch in</label>
+                        <input type="radio" id="q5a2" name="q5" value="5"><label for="q5a2">Mostly clear</label>
+                        <input type="radio" id="q5a3" name="q5" value="10"><label for="q5a3">Defined in writing</label>
+                    </div>
+                </div>
+                <div class="question-group">
+                    <label>How is team performance managed?</label>
+                    <div class="answers">
+                        <input type="radio" id="q6a1" name="q6" value="0"><label for="q6a1">Based on my gut feeling</label>
+                        <input type="radio" id="q6a2" name="q6" value="5"><label for="q6a2">Occasional check-ins</label>
+                        <input type="radio" id="q6a3" name="q6" value="10"><label for="q6a3">Regular reviews with KPIs</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Financial Planning -->
+            <div class="wizard-step" data-step="4" data-category="Financial Planning">
+                 <h2>Category 4: Financial Planning</h2>
+                <div class="question-group">
+                    <label>How often do you review your key financial statements (P&L, Balance Sheet)?</label>
+                    <div class="answers">
+                        <input type="radio" id="q7a1" name="q7" value="0"><label for="q7a1">Tax time</label>
+                        <input type="radio" id="q7a2" name="q7" value="5"><label for="q7a2">Quarterly</label>
+                        <input type="radio" id="q7a3" name="q7" value="10"><label for="q7a3">Monthly or more</label>
+                    </div>
+                </div>
+                <div class="question-group">
+                    <label>Do you have a forward-looking budget or cash flow forecast?</label>
+                    <div class="answers">
+                        <input type="radio" id="q8a1" name="q8" value="0"><label for="q8a1">No, we just spend</label>
+                        <input type="radio" id="q8a2" name="q8" value="5"><label for="q8a2">A rough idea</label>
+                        <input type="radio" id="q8a3" name="q8" value="10"><label for="q8a3">A detailed forecast</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Step -->
+            <div class="wizard-step" id="resultsStep" data-step="5">
+                <h2>Your Diagnostic Results</h2>
+                <div class="results-grid">
+                    <div class="grade-display">
+                        <p class="grade-letter" id="gradeLetter">C</p>
+                        <p class="grade-score" id="gradeScore">Score: 0 / 100</p>
+                        <div class="grade-interpretation" id="gradeInterpretation">
+                            Your results are being calculated.
+                        </div>
+                    </div>
+                    <div>
+                        <canvas id="resultsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="navigation-buttons">
+                <button id="prevBtn" onclick="navigateStep(-1)">Previous</button>
+                <button id="nextBtn" onclick="navigateStep(1)">Next</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Built by Emprise Digital | <a href="https://emprisedigital.com" target="_blank">emprisedigital.com</a></p>
+            <p>Want to discuss these numbers? DM Mark McNair.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const password = "emprise2026";
+            let enteredPassword = prompt("Please enter the password:", "");
+            if (enteredPassword !== password) {
+                document.body.innerHTML = "<h1 style='text-align:center; padding-top: 50px;'>Access Denied</h1>";
+                return;
+            }
+            initializeWizard();
+        });
+
+        let currentStep = 1;
+        const totalSteps = document.querySelectorAll('[data-step]').length;
+        const wizard = document.getElementById('assessmentWizard');
+        const steps = wizard.querySelectorAll('.wizard-step');
+
+        function initializeWizard() {
+            updateWizardState();
+            wizard.addEventListener('change', () => {
+                 setTimeout(updateWizardState, 100);
+            });
+        }
+
+        function navigateStep(direction) {
+            const nextStep = currentStep + direction;
+            if (nextStep > 0 && nextStep <= totalSteps) {
+                currentStep = nextStep;
+                updateWizardState();
+            }
+        }
+
+        function updateWizardState() {
+            const currentStepElement = wizard.querySelector(`[data-step="${currentStep}"]`);
+            
+            steps.forEach(step => step.classList.remove('active'));
+            currentStepElement.classList.add('active');
+
+            // Progress bar
+            const progress = (currentStep - 1) / (totalSteps - 1) * 100;
+            wizard.querySelector('.progress-bar-fill').style.width = `${progress}%`;
+
+            // Buttons
+            const prevBtn = wizard.querySelector('#prevBtn');
+            const nextBtn = wizard.querySelector('#nextBtn');
+            prevBtn.style.display = currentStep === 1 || currentStep === totalSteps ? 'none' : 'block';
+            nextBtn.textContent = currentStep === totalSteps - 1 ? 'Show Results' : 'Next';
+            nextBtn.style.display = currentStep === totalSteps ? 'none' : 'block';
+            
+            // Validate current step before allowing 'Next'
+            const inputs = currentStepElement.querySelectorAll('input[type="radio"]');
+            if (inputs.length > 0) {
+                const answeredQuestions = new Set(Array.from(inputs).filter(i => i.checked).map(i => i.name));
+                const totalQuestions = new Set(Array.from(inputs).map(i => i.name));
+                nextBtn.disabled = answeredQuestions.size < totalQuestions.size;
+            } else {
+                 nextBtn.disabled = false;
+            }
+
+
+            if (currentStep === totalSteps) {
+                calculateResults();
+            }
+        }
+        
+        function calculateResults() {
+            const categoryScores = {};
+            const categoryMaxScore = 20; // 2 questions per category, 10 points max each
+
+            steps.forEach(step => {
+                const category = step.dataset.category;
+                if (!category) return;
+                
+                let score = 0;
+                const questions = step.querySelectorAll('.question-group');
+                questions.forEach(q => {
+                    const checkedRadio = q.querySelector('input[type="radio"]:checked');
+                    if (checkedRadio) {
+                        score += parseInt(checkedRadio.value, 10);
+                    }
+                });
+                categoryScores[category] = (score / categoryMaxScore) * 100;
+            });
+
+            const totalScore = Object.values(categoryScores).reduce((sum, score) => sum + score, 0);
+            const numCategories = Object.keys(categoryScores).length;
+            const finalScore = Math.round(totalScore / numCategories);
+
+            displayResults(finalScore, categoryScores);
+        }
+
+        function displayResults(score, categoryData) {
+            const gradeLetterEl = document.getElementById('gradeLetter');
+            const gradeScoreEl = document.getElementById('gradeScore');
+            const interpretationEl = document.getElementById('gradeInterpretation');
+            
+            gradeScoreEl.textContent = `Score: ${score} / 100`;
+            
+            let grade, interpretation, color;
+            if (score >= 90) { grade = 'A'; color = 'var(--green)'; interpretation = "You're operating like a well-oiled machine. Your systems are strong, allowing you to focus on strategic growth (Rocks)."; }
+            else if (score >= 80) { grade = 'B'; color = 'var(--green)'; interpretation = "You have good systems in place, but there are still opportunities to reduce reactive work (Sand) and focus more on what matters."; }
+            else if (score >= 70) { grade = 'C'; color = 'var(--orange)'; interpretation = "You're caught in the middle, balancing proactive work with a significant amount of 'firefighting'. It's time to prioritize system building."; }
+            else if (score >= 60) { grade = 'D'; color = 'var(--orange)'; interpretation = "Warning: Reactive 'Sand' is dominating your time. The business is likely running you, not the other way around. Urgent changes are needed."; }
+            else { grade = 'F'; color = 'var(--red)'; interpretation = "Crisis mode. You are buried in 'Sand'. The business is at risk without a fundamental shift to proactive, system-based operations."; }
+            
+            gradeLetterEl.textContent = grade;
+            gradeLetterEl.style.color = color;
+            interpretationEl.textContent = interpretation;
+            interpretationEl.style.backgroundColor = `${color}20`; // a little transparent
+            interpretationEl.style.border = `1px solid ${color}`;
+            
+            renderRadarChart(categoryData);
+        }
+        
+        let chartInstance;
+        function renderRadarChart(categoryData) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            const labels = Object.keys(categoryData);
+            const data = Object.values(categoryData);
+
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Proactivity Score',
+                        data: data,
+                        fill: true,
+                        backgroundColor: 'rgba(26, 54, 93, 0.2)',
+                        borderColor: 'rgb(26, 54, 93)',
+                        pointBackgroundColor: 'rgb(26, 54, 93)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(26, 54, 93)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { display: false },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            pointLabels: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
